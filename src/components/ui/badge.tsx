@@ -19,6 +19,11 @@ const badgeVariants = cva(
         ghost:
           "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
         link: "text-primary underline-offset-4 hover:underline",
+        accent: "bg-amber-500/15 text-amber-400 [a]:hover:bg-amber-500/25",
+        success: "bg-emerald-500/15 text-emerald-400 [a]:hover:bg-emerald-500/25",
+        beginner: "bg-emerald-500/15 text-emerald-400 [a]:hover:bg-emerald-500/25",
+        intermediate: "bg-amber-500/15 text-amber-400 [a]:hover:bg-amber-500/25",
+        advanced: "bg-red-500/15 text-red-400 [a]:hover:bg-red-500/25",
       },
     },
     defaultVariants: {

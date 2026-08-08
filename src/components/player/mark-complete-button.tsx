@@ -19,7 +19,7 @@ export function MarkCompleteButton({ courseId, lessonId, isCompleted }: MarkComp
 
   if (isCompleted) {
     return (
-      <div className="flex items-center gap-2 font-medium text-emerald-600">
+      <div className="flex items-center gap-2 font-medium text-emerald-400">
         <CheckCircle2 className="size-5" />
         Lección completada
       </div>

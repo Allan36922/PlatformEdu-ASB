@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { CourseCard } from "@/components/courses/course-card";
 import { getCategoriesWithCounts, getFeaturedCourses } from "@/lib/queries/courses";
+import { LiveSimulator } from "@/components/landing/live-simulator";
 
 export default async function HomePage() {
   const [featuredCourses, categories] = await Promise.all([
@@ -11,38 +13,62 @@ export default async function HomePage() {
 
   return (
     <div>
-      <section className="border-b bg-gradient-to-b from-muted/50 to-background">
-        <div className="mx-auto max-w-7xl px-4 py-20 text-center">
-          <h1 className="mx-auto max-w-3xl text-4xl font-bold tracking-tight text-balance sm:text-5xl">
-            Aprende las habilidades que impulsan tu carrera
-          </h1>
-          <p className="mx-auto mt-4 max-w-xl text-lg text-muted-foreground text-balance">
-            Cursos online creados por instructores expertos en tecnología, diseño, negocios e
-            idiomas.
-          </p>
-          <div className="mt-8 flex justify-center gap-3">
-            <Button size="lg" render={<Link href="/cursos">Explorar cursos</Link>} />
-            <Button
-              size="lg"
-              variant="outline"
-              render={<Link href="/signup">Enseña en EduPlatform</Link>}
-            />
+      <section className="relative overflow-hidden border-b bg-background text-foreground py-20 lg:py-28">
+        {/* Primary-tinted ambient glow */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_0%,var(--primary)_0%,transparent_70%)] opacity-15 pointer-events-none" />
+
+        <div className="relative mx-auto max-w-7xl px-4 flex flex-col items-center text-center space-y-12">
+          <div className="space-y-6 max-w-3xl">
+            {/* Eyebrow */}
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-primary/30 bg-primary/10 text-xs font-mono font-medium text-primary tracking-wide uppercase">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              Nueva Experiencia de Aprendizaje
+            </span>
+
+            {/* Headline */}
+            <h1 className="text-4xl font-extrabold tracking-tight font-heading text-balance sm:text-6xl bg-gradient-to-b from-foreground via-foreground to-foreground/40 bg-clip-text text-transparent">
+              Domina las habilidades del futuro con clases interactivas
+            </h1>
+
+            {/* Subtitle */}
+            <p className="mx-auto mt-4 max-w-xl text-md sm:text-lg text-muted-foreground text-balance leading-relaxed">
+              Descubre cursos premium creados por expertos en desarrollo, diseño, IA y negocios. Disfruta de un reproductor de última generación, quizzes integrados y certificaciones automáticas.
+            </p>
+
+            {/* CTAs */}
+            <div className="pt-4 flex justify-center items-center gap-4">
+              <Button size="lg" nativeButton={false} render={<Link href="/cursos">Explorar Cursos</Link>} />
+              <Button
+                size="lg"
+                variant="outline"
+                nativeButton={false}
+                render={<Link href="/signup">Enseñar en EduPlatform</Link>}
+              />
+            </div>
+          </div>
+
+          {/* Signature Live Simulator */}
+          <div className="w-full pt-6">
+            <LiveSimulator />
           </div>
         </div>
       </section>
 
       {categories.length > 0 && (
         <section className="mx-auto max-w-7xl px-4 py-12">
-          <h2 className="mb-6 text-2xl font-semibold">Categorías populares</h2>
+          <h2 className="mb-6 text-2xl font-semibold font-heading">Categorías populares</h2>
           <div className="flex flex-wrap gap-3">
             {categories.map(({ category, count }) => (
-              <Link
+              <Badge
                 key={category}
-                href={`/cursos?category=${encodeURIComponent(category)}`}
-                className="rounded-full border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
-              >
-                {category} <span className="text-muted-foreground">({count})</span>
-              </Link>
+                variant="outline"
+                className="px-4 py-2 text-sm font-medium"
+                render={
+                  <Link href={`/cursos?category=${encodeURIComponent(category)}`}>
+                    {category} <span className="text-muted-foreground">({count})</span>
+                  </Link>
+                }
+              />
             ))}
           </div>
         </section>

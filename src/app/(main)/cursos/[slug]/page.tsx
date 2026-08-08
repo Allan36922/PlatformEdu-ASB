@@ -1,16 +1,17 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { Star, Users, Clock, BarChart } from "lucide-react";
+import { Star, Users, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CourseCurriculum } from "@/components/courses/course-curriculum";
+import { LevelBadge } from "@/components/courses/level-badge";
 import { ReviewList } from "@/components/courses/review-list";
 import { ReviewForm } from "@/components/courses/review-form";
 import { EnrollButton } from "@/components/courses/enroll-button";
 import { getCourseBySlug, getFirstLessonId } from "@/lib/queries/courses";
 import { createClient } from "@/lib/supabase/server";
-import { courseLevelLabel, formatCurrency, formatDuration } from "@/lib/utils";
+import { formatCurrency, formatDuration } from "@/lib/utils";
 
 interface CourseDetailPageProps {
   params: Promise<{ slug: string }>;
@@ -73,9 +74,7 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
               <span className="flex items-center gap-1">
                 <Users className="size-4" /> {course.student_count} estudiantes
               </span>
-              <span className="flex items-center gap-1">
-                <BarChart className="size-4" /> {courseLevelLabel(course.level)}
-              </span>
+              <LevelBadge level={course.level} />
               {totalSeconds > 0 && (
                 <span className="flex items-center gap-1">
                   <Clock className="size-4" /> {formatDuration(totalSeconds)}

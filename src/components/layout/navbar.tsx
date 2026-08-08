@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { GraduationCap } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { UserMenu } from "./user-menu";
@@ -23,7 +24,8 @@ export async function Navbar() {
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4">
-        <Link href="/" className="shrink-0 text-lg font-bold tracking-tight">
+        <Link href="/" className="flex shrink-0 items-center gap-2 font-heading text-lg font-bold tracking-tight">
+          <GraduationCap className="size-5 text-primary" />
           EduPlatform
         </Link>
         <nav className="hidden items-center gap-6 text-sm font-medium md:flex">

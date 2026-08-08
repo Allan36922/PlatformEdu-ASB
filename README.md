@@ -8,12 +8,16 @@ Este repositorio implementa el MVP funcional descrito en la especificación: aut
 
 ## Stack
 
-- Next.js 16 (App Router, TypeScript, Server Actions) + Tailwind CSS + shadcn/ui
+- Next.js 16 (App Router, TypeScript, Server Actions) + Tailwind CSS + shadcn/ui (sobre primitivas de `@base-ui/react`)
 - Supabase: Postgres con Row Level Security, Auth (email/password + OAuth), Storage
 - Stripe Checkout para pagos únicos
 - `@dnd-kit` para reordenar secciones/lecciones por drag and drop
 - `@react-pdf/renderer` para generar el PDF del certificado
 - Vitest + Testing Library para tests unitarios
+
+## Diseño
+
+La interfaz usa un tema oscuro único ("Edutech": fondo casi negro, acento primario violeta, detalles en ámbar) definido como variables CSS en `src/app/globals.css` y aplicado globalmente vía la clase `dark` en `<html>` (`src/app/layout.tsx`). Tipografía: **Sora** (títulos), **Manrope** (cuerpo) y **JetBrains Mono** (código/datos), cargadas con `next/font/google`. Los componentes de `src/components/ui/` son shadcn/ui estándar; al consumir únicamente los tokens semánticos (`bg-primary`, `text-muted-foreground`, etc.) heredan el tema sin necesitar estilos por componente.
 
 ## Puesta en marcha
 
@@ -79,7 +83,7 @@ src/
     (main)/               Landing, catálogo, curso, checkout, aprender,
                            instructor/*, estudiante, perfil, certificados
     api/                  Route Handlers (webhook de Stripe, descarga de certificados)
-  components/            Componentes de UI por dominio (courses, catalog, player, dashboard, layout, auth, ui)
+  components/            Componentes de UI por dominio (courses, catalog, checkout, player, dashboard, landing, layout, auth, ui)
   lib/
     supabase/             Clientes de Supabase (browser, server, admin, middleware)
     stripe/                Cliente de Stripe y cálculo de comisión de plataforma

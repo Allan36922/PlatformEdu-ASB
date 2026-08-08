@@ -11,8 +11,8 @@ export function StatCard({
 }) {
   return (
     <div className="rounded-lg border p-4">
-      <Icon className="mb-2 size-5 text-muted-foreground" />
-      <p className="text-2xl font-bold">{value}</p>
+      <Icon className="mb-2 size-5 text-primary" />
+      <p className="font-heading text-2xl font-bold">{value}</p>
       <p className="text-sm text-muted-foreground">{label}</p>
     </div>
   );

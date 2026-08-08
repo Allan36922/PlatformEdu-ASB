@@ -43,7 +43,7 @@ export function QuizViewer({ lessonId, questions }: QuizViewerProps) {
                   className={cn(
                     "flex w-full items-center rounded-md border px-3 py-2 text-left text-sm transition-colors",
                     isSelected && !result && "border-primary bg-primary/5",
-                    isCorrectSelection && "border-emerald-500 bg-emerald-50 text-emerald-700",
+                    isCorrectSelection && "border-emerald-500 bg-emerald-500/10 text-emerald-400",
                     isWrongSelection && "border-destructive bg-destructive/5 text-destructive",
                   )}
                 >

@@ -14,6 +14,7 @@ interface CoursesPageProps {
 export default async function CoursesPage({ searchParams }: CoursesPageProps) {
   const params = await searchParams;
   const page = Number(params.page ?? "1") || 1;
+  const view = params.view === "list" ? "list" : "grid";
 
   const { courses, total, pageSize } = await searchCourses({
     category: params.category,
@@ -42,9 +43,15 @@ export default async function CoursesPage({ searchParams }: CoursesPageProps) {
           <p className="mb-4 text-sm text-muted-foreground">
             {total} curso{total === 1 ? "" : "s"} encontrado{total === 1 ? "" : "s"}
           </p>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div
+            className={
+              view === "list"
+                ? "flex flex-col gap-4"
+                : "grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+            }
+          >
             {courses.map((course) => (
-              <CourseCard key={course.id} course={course} />
+              <CourseCard key={course.id} course={course} layout={view} />
             ))}
           </div>
           <CoursePagination page={page} pageSize={pageSize} total={total} searchParams={params} />

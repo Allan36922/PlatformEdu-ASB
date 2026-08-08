@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { Award, Download } from "lucide-react";
+import { Award, Download, GraduationCap } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { StatCard } from "@/components/dashboard/stat-card";
 import { getStudentDashboardData } from "@/lib/queries/student-dashboard";
 import { formatCurrency } from "@/lib/utils";
 
@@ -16,6 +17,11 @@ export default async function StudentDashboardPage() {
   return (
     <div className="space-y-10">
       <h1 className="text-2xl font-bold tracking-tight">Mi aprendizaje</h1>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <StatCard icon={GraduationCap} label="Cursos completados" value={String(data.completed.length)} />
+        <StatCard icon={Award} label="Certificados" value={String(data.certificates.length)} />
+      </div>
 
       <section>
         <h2 className="mb-4 text-lg font-semibold">En progreso</h2>
