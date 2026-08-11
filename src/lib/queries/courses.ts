@@ -13,7 +13,7 @@ export interface CourseFilters {
   pageSize?: number;
 }
 
-const COURSE_WITH_INSTRUCTOR_SELECT = "*, instructor:profiles(id, full_name, avatar_url, headline)";
+export const COURSE_WITH_INSTRUCTOR_SELECT = "*, instructor:profiles(id, full_name, avatar_url, headline)";
 
 export async function getFeaturedCourses(limit = 8) {
   const supabase = await createClient();
