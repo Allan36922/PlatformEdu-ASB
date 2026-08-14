@@ -139,6 +139,17 @@ export async function getCourseBySlug(slug: string) {
   };
 }
 
+export async function getPublishedCourseById(courseId: string) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("courses")
+    .select(COURSE_WITH_INSTRUCTOR_SELECT)
+    .eq("id", courseId)
+    .eq("status", "published")
+    .maybeSingle();
+  return data as unknown as CourseWithInstructor | null;
+}
+
 export async function getFirstLessonId(courseId: string) {
   const supabase = await createClient();
   const { data: sectionsRaw } = await supabase
