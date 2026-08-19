@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { CourseWithInstructor, Lesson, Section } from "@/types/database";
+import type { Course, CourseWithInstructor, Lesson, Section } from "@/types/database";
 
 export interface CourseFilters {
   category?: string;
@@ -24,6 +24,23 @@ export async function getFeaturedCourses(limit = 8) {
     .order("student_count", { ascending: false })
     .limit(limit);
   return (data ?? []) as unknown as CourseWithInstructor[];
+}
+
+/**
+ * Primeros cursos publicados en orden alfabetico, para la seccion de
+ * destacados de "Quienes somos". Se ordena por titulo (y no por
+ * student_count como getFeaturedCourses) para que la seleccion sea estable:
+ * no cambia cada vez que alguien se matricula.
+ */
+export async function getHighlightedCourses(limit = 3) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("courses")
+    .select("id, slug, title, level, price")
+    .eq("status", "published")
+    .order("title", { ascending: true })
+    .limit(limit);
+  return (data ?? []) as Pick<Course, "id" | "slug" | "title" | "level" | "price">[];
 }
 
 export async function getCategoriesWithCounts() {

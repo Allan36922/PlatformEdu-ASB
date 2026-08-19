@@ -26,16 +26,24 @@ export function ReviewList({ reviews }: { reviews: ReviewListItem[] }) {
         return (
           <li key={review.id} className="flex gap-3">
             <Avatar className="size-9">
-              <AvatarImage src={review.student?.avatar_url ?? undefined} />
-              <AvatarFallback>{initials}</AvatarFallback>
+              <AvatarImage
+                src={review.student?.avatar_url ?? undefined}
+                alt={`Foto de ${review.student?.full_name ?? "estudiante"}`}
+              />
+              <AvatarFallback aria-hidden="true">{initials}</AvatarFallback>
             </Avatar>
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium">{review.student?.full_name ?? "Estudiante"}</span>
-                <span className="flex items-center gap-0.5">
+                <span
+                  className="flex items-center gap-0.5"
+                  role="img"
+                  aria-label={`Calificación: ${review.rating} de 5 estrellas`}
+                >
                   {Array.from({ length: 5 }).map((_, index) => (
                     <Star
                       key={index}
+                      aria-hidden="true"
                       className={`size-3.5 ${
                         index < review.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground"
                       }`}
