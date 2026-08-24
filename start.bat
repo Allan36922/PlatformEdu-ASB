@@ -30,11 +30,15 @@ if not exist .env.local (
     exit /b 1
 )
 
+echo [1/4] Limpiando cache de Turbopack...
+if exist .next rmdir /s /q .next 2>nul
+echo         Cache limpiada.
+
 echo [1/4] Instalando dependencias de Node.js...
 call npm install --silent 2>nul
 
 if "%NO_PYTHON%"=="" (
-    echo [2/4] Instalando dependencias de Python...
+    echo [2/5] Instalando dependencias de Python...
     if not exist "edy-agent\venv" (
         python -m venv edy-agent\venv 2>nul
     )
@@ -44,7 +48,7 @@ if "%NO_PYTHON%"=="" (
     echo [2/4] Python no disponible, saltando agente de voz...
 )
 
-echo [3/4] Iniciando Next.js (http://localhost:3000)...
+echo [3/5] Iniciando Next.js (http://localhost:3000)...
 start "EduPlatform" cmd /c "npm run dev"
 
 :: Wait for Next.js to be ready
@@ -52,10 +56,10 @@ echo     Esperando a que Next.js este listo...
 timeout /t 8 /nobreak >nul
 
 if "%NO_PYTHON%"=="" (
-    echo [4/4] Iniciando agente Edy (LiveKit)...
+    echo [5/5] Iniciando agente Edy (LiveKit)...
     start "Edy Agent" cmd /c "cd edy-agent && ..\edy-agent\venv\Scripts\activate.bat && python agent.py start"
 ) else (
-    echo [4/4] Agente de voz no disponible (sin Python).
+    echo [5/5] Agente de voz no disponible (sin Python).
 )
 
 echo.
