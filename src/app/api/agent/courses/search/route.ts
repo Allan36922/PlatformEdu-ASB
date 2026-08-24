@@ -16,7 +16,13 @@ export async function GET(request: NextRequest) {
 
   try {
     const courses = await searchCoursesBySimilarity(q, limit);
-    return NextResponse.json({ courses, query: q });
+    // Strip embeddings from response (they're huge and not needed by the client)
+    const cleaned = courses.map((c) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { embedding, ...rest } = c as unknown as Record<string, unknown>;
+      return rest;
+    });
+    return NextResponse.json({ courses: cleaned, query: q });
   } catch (err) {
     console.error("Error en búsqueda semántica:", err);
     return NextResponse.json({ error: "Error en búsqueda" }, { status: 500 });

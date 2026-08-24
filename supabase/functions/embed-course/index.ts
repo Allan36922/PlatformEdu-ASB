@@ -2,15 +2,17 @@
 
 // supabase/functions/embed-course/index.ts
 //
-// Invocada por el trigger `courses_generate_embedding`
-// (supabase/migrations/0005_embeddings.sql) vía pg_net cuando un curso se
-// inserta ya publicado o pasa de borrador a publicado. Genera el embedding
-// con el modelo integrado y gratuito de Supabase (gte-small, 384 dims) y
-// actualiza `courses.embedding` con el cliente admin (service role) — igual
-// que enrollments/transactions/certificates, esta escritura solo puede
-// hacerla el backend (ver notas de seguridad del README y RLS en 0002_rls.sql).
+// Invoked by the `courses_generate_embedding` trigger
+// (supabase/migrations/0005_embeddings.sql) via pg_net when a course is
+// inserted as published or transitions from draft to published.
+// Generates the embedding via NVIDIA NIM API (nvidia/nv-embedqa-e5-v5, 384 dims)
+// and updates `courses.embedding` with the admin client (service role).
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+
+const NVIDIA_NIM_URL = "https://integrate.api.nvidia.com/v1/embeddings";
+const EMBEDDING_MODEL = "nvidia/nv-embedqa-e5-v5";
+const EMBEDDING_DIM = 1024;
 
 const LEVEL_LABEL: Record<string, string> = {
   beginner: "Principiante",
@@ -32,21 +34,20 @@ interface SectionRow {
   lessons: { title: string }[];
 }
 
-/**
- * Arma el mismo texto que `buildCourseEmbeddingText` en
- * src/lib/queries/embeddings.ts (title + description + level + category +
- * títulos del temario). Se duplica aquí porque esta función corre en Deno,
- * aislada del código de la app Next.js — si cambias uno, actualiza el otro.
- */
 function buildEmbeddingText(course: CourseRow, sections: SectionRow[]): string {
   const parts = [
     course.title,
     course.description,
     LEVEL_LABEL[course.level] ?? course.level,
     course.category,
-    ...sections.flatMap((section) => [section.title, ...section.lessons.map((lesson) => lesson.title)]),
+    ...sections.flatMap((section) => [
+      section.title,
+      ...section.lessons.map((lesson) => lesson.title),
+    ]),
   ];
-  return parts.filter((part): part is string => Boolean(part && part.trim())).join("\n");
+  return parts
+    .filter((part): part is string => Boolean(part && part.trim()))
+    .join("\n");
 }
 
 function json(body: unknown, status = 200) {
@@ -54,6 +55,49 @@ function json(body: unknown, status = 200) {
     status,
     headers: { "Content-Type": "application/json" },
   });
+}
+
+async function generateEmbedding(text: string): Promise<number[] | null> {
+  const apiKey = Deno.env.get("NVIDIA_NIM_API_KEY");
+  if (!apiKey) {
+    console.error("NVIDIA_NIM_API_KEY no configurado");
+    return null;
+  }
+
+  try {
+    const response = await fetch(NVIDIA_NIM_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        input: [text],
+        model: EMBEDDING_MODEL,
+        input_type: "query",
+        encoding_format: "float",
+      }),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("NVIDIA NIM error:", response.status, errText);
+      return null;
+    }
+
+    const data = await response.json();
+    const embedding = data?.data?.[0]?.embedding;
+    if (!embedding || !Array.isArray(embedding)) {
+      console.error("Respuesta inválida de NVIDIA NIM:", data);
+      return null;
+    }
+
+    // Truncate or pad to EMBEDDING_DIM if needed
+    return embedding.slice(0, EMBEDDING_DIM);
+  } catch (err) {
+    console.error("Error llamando NVIDIA NIM:", err);
+    return null;
+  }
 }
 
 Deno.serve(async (req) => {
@@ -87,7 +131,6 @@ Deno.serve(async (req) => {
     return json({ error: courseError.message }, 500);
   }
   if (!course || course.status !== "published") {
-    // El curso se despublicó (o se borró) entre el trigger y esta llamada: no hay nada que embeber.
     return json({ skipped: true });
   }
 
@@ -101,10 +144,15 @@ Deno.serve(async (req) => {
     return json({ error: sectionsError.message }, 500);
   }
 
-  const text = buildEmbeddingText(course, (sectionsRaw ?? []) as unknown as SectionRow[]);
+  const text = buildEmbeddingText(
+    course,
+    (sectionsRaw ?? []) as unknown as SectionRow[],
+  );
 
-  const model = new Supabase.ai.Session("gte-small");
-  const embedding = await model.run(text, { mean_pool: true, normalize: true });
+  const embedding = await generateEmbedding(text);
+  if (!embedding) {
+    return json({ error: "No se pudo generar el embedding" }, 500);
+  }
 
   const { error: updateError } = await supabaseAdmin
     .from("courses")
@@ -116,5 +164,5 @@ Deno.serve(async (req) => {
     return json({ error: updateError.message }, 500);
   }
 
-  return json({ ok: true });
+  return json({ ok: true, model: EMBEDDING_MODEL, dims: embedding.length });
 });

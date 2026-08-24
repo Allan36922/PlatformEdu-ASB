@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { COURSE_WITH_INSTRUCTOR_SELECT } from "@/lib/queries/courses";
 import type { CourseWithInstructor } from "@/types/database";
-import { generateLocalEmbedding, cosineSimilarity } from "@/lib/utils/localEmbeddings";
+import { generateEmbedding, generateLocalEmbedding, cosineSimilarity } from "@/lib/utils/localEmbeddings";
 
 /**
  * Pide el embedding de un texto libre a la Edge Function "embed-text", que
@@ -11,10 +12,14 @@ import { generateLocalEmbedding, cosineSimilarity } from "@/lib/utils/localEmbed
  * Si falla, usa embeddings locales como fallback para desarrollo.
  */
 async function getQueryEmbedding(query: string): Promise<number[] | null> {
+  // 1. Try NVIDIA NIM directly from the server
+  const nvidiaEmbedding = await getNvidiaEmbedding(query);
+  if (nvidiaEmbedding) return nvidiaEmbedding;
+
+  // 2. Try Edge Function (Supabase deployment)
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  
-  // Intentar con Edge Function primero (producción)
+
   if (supabaseUrl && serviceRoleKey) {
     try {
       const response = await fetch(`${supabaseUrl}/functions/v1/embed-text`, {
@@ -23,19 +28,50 @@ async function getQueryEmbedding(query: string): Promise<number[] | null> {
           "Content-Type": "application/json",
           Authorization: `Bearer ${serviceRoleKey}`,
         },
-        body: JSON.stringify({ text: query, model: "gte-small" }),
+        body: JSON.stringify({ text: query }),
       });
       if (response.ok) {
         const { embedding } = (await response.json()) as { embedding?: number[] };
         if (embedding) return embedding;
       }
     } catch (err) {
-      console.warn("Edge Function embed-text no disponible, usando fallback local:", err);
+      console.warn("Edge Function embed-text no disponible:", err);
     }
   }
-  
-  // Fallback: embedding local determinista (solo para desarrollo/testing)
+
+  // 3. Fallback: local pseudo-embedding (dev/testing only)
   return generateLocalEmbedding(query);
+}
+
+/**
+ * Calls NVIDIA NIM directly from the Next.js server.
+ */
+async function getNvidiaEmbedding(text: string): Promise<number[] | null> {
+  const apiKey = process.env.NVIDIA_NIM_API_KEY;
+  if (!apiKey) return null;
+
+  try {
+    const response = await fetch("https://integrate.api.nvidia.com/v1/embeddings", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        input: [text],
+        model: "nvidia/nv-embedqa-e5-v5",
+        input_type: "query",
+        encoding_format: "float",
+      }),
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    const embedding = data?.data?.[0]?.embedding;
+    if (!embedding || !Array.isArray(embedding)) return null;
+    return embedding.slice(0, 1024);
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -58,24 +94,28 @@ export async function searchCoursesBySimilarity(
   const supabase = await createClient();
   
   // Intentar búsqueda vía RPC match_courses (producción con embeddings reales)
-  const { data: matches, error: matchError } = (await supabase.rpc("match_courses", {
-    query_embedding: embedding,
-    match_count: limit,
-  })) as { data: { id: string; similarity: number }[] | null; error: unknown };
+  try {
+    const admin = createAdminClient();
+    const { data: matches, error: matchError } = await admin.rpc("match_courses", {
+      query_embedding: embedding,
+      match_count: limit,
+    });
 
-  // Si la RPC funciona y devuelve resultados, usarla
-  if (!matchError && matches && matches.length > 0) {
-    const ids = matches.map((match) => match.id);
-    const { data: courses } = await supabase
-      .from("courses")
-      .select(COURSE_WITH_INSTRUCTOR_SELECT)
-      .in("id", ids);
+    if (!matchError && matches && matches.length > 0) {
+      const ids = (matches as { id: string; similarity: number }[]).map((m) => m.id);
+      const { data: courses } = await supabase
+        .from("courses")
+        .select(COURSE_WITH_INSTRUCTOR_SELECT)
+        .in("id", ids);
 
-    const byId = new Map(
-      ((courses ?? []) as unknown as CourseWithInstructor[]).map((course) => [course.id, course]),
-    );
+      const byId = new Map(
+        ((courses ?? []) as unknown as CourseWithInstructor[]).map((course) => [course.id, course]),
+      );
 
-    return ids.map((id) => byId.get(id)).filter((course): course is CourseWithInstructor => Boolean(course));
+      return ids.map((id) => byId.get(id)).filter((course): course is CourseWithInstructor => Boolean(course));
+    }
+  } catch (err) {
+    console.warn("[searchCourses] RPC failed, using local fallback:", err);
   }
 
   // Fallback: búsqueda local en memoria (desarrollo con embeddings locales)
