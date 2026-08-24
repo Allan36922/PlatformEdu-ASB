@@ -1,10 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
+import { safeGetUser } from "@/lib/supabase/auth-helpers";
 
 export async function getStudentDashboardData() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await safeGetUser(supabase);
   if (!user) return null;
 
   const { data: enrollments } = await supabase

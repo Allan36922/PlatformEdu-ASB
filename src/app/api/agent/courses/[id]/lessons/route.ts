@@ -1,73 +1,74 @@
-import { NextResponse } from "next/server";
-import { checkAgentAuth } from "@/lib/agent-auth";
 import { createClient } from "@/lib/supabase/server";
-import type { Section, Lesson } from "@/types/database";
+import { NextRequest, NextResponse } from "next/server";
+import { validateAgentRequest } from "@/lib/utils/agentAuth";
 
-/**
- * Temario (secciones + lecciones) de un curso para el agente de voz Edy.
- * Usa el cliente con RLS: los títulos del temario son públicos para cursos
- * publicados, pero content_url/content_text solo se exponen si el
- * estudiante (studentId) está inscrito — ver notas de RLS en CLAUDE.md.
- */
 export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const authError = checkAgentAuth(request);
+  const authError = validateAgentRequest(request);
   if (authError) return authError;
 
-  const { id: courseId } = await params;
+  const { id } = await params;
   const { searchParams } = new URL(request.url);
-  const studentId = searchParams.get("studentId");
+  const studentId = searchParams.get("student_id");
+
+  if (!studentId) {
+    return NextResponse.json(
+      { error: "Se requiere student_id para acceder a las lecciones" },
+      { status: 401 }
+    );
+  }
 
   const supabase = await createClient();
 
-  const { data: course } = await supabase
+  // Verificar que el curso existe y está publicado
+  const { data: course, error: courseError } = await supabase
     .from("courses")
-    .select("id, status")
-    .eq("id", courseId)
+    .select("id, price")
+    .eq("id", id)
     .eq("status", "published")
     .maybeSingle();
-  if (!course) {
+
+  if (courseError || !course) {
     return NextResponse.json({ error: "Curso no encontrado" }, { status: 404 });
   }
 
-  let isEnrolled = false;
-  if (studentId) {
-    const { data: enrollment } = await supabase
-      .from("enrollments")
-      .select("id")
-      .eq("course_id", courseId)
-      .eq("student_id", studentId)
-      .maybeSingle();
-    isEnrolled = Boolean(enrollment);
+  // Verificar inscripción (o si es gratis, permitir acceso)
+  const { data: enrollment } = await supabase
+    .from("enrollments")
+    .select("id")
+    .eq("course_id", id)
+    .eq("student_id", studentId)
+    .maybeSingle();
+
+  const isFree = (course.price ?? 0) === 0;
+  const isEnrolled = Boolean(enrollment);
+
+  if (!isFree && !isEnrolled) {
+    return NextResponse.json(
+      { error: "No estás inscrito en este curso", requiresEnrollment: true, price: course.price },
+      { status: 403 }
+    );
   }
 
-  const { data: sectionsRaw } = await supabase
+  // Obtener secciones y lecciones
+  const { data: sectionsRaw, error: sectionsError } = await supabase
     .from("sections")
     .select("*, lessons(*)")
-    .eq("course_id", courseId)
+    .eq("course_id", id)
     .order("position", { ascending: true });
 
+  if (sectionsError) {
+    return NextResponse.json({ error: sectionsError.message }, { status: 500 });
+  }
+
   const sections = (sectionsRaw ?? []).map((section) => ({
-    ...(section as Section),
-    lessons: [...(((section as unknown as { lessons: Lesson[] }).lessons) ?? [])].sort(
+    ...section,
+    lessons: [...(((section as unknown as { lessons: { id: string; title: string; type: string; content_url: string | null; content_text: string | null; duration_seconds: number; position: number; is_free_preview: boolean }[] }).lessons) ?? [])].sort(
       (a, b) => a.position - b.position,
     ),
   }));
 
-  const lessons = sections.flatMap((section) =>
-    section.lessons.map((lesson) => ({
-      id: lesson.id,
-      title: lesson.title,
-      section_title: section.title,
-      type: lesson.type,
-      duration_seconds: lesson.duration_seconds,
-      is_free_preview: lesson.is_free_preview,
-      content_url: isEnrolled || lesson.is_free_preview ? lesson.content_url : null,
-      content_text: isEnrolled || lesson.is_free_preview ? lesson.content_text : null,
-    })),
-  );
-
-  return NextResponse.json(lessons);
+  return NextResponse.json({ sections, isEnrolled, isFree });
 }

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { safeGetUser } from "@/lib/supabase/auth-helpers";
 import type { Course, CourseWithInstructor, Lesson, Section } from "@/types/database";
 
 export interface CourseFilters {
@@ -135,9 +136,7 @@ export async function getCourseBySlug(slug: string) {
     .limit(20);
 
   let isEnrolled = false;
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await safeGetUser(supabase);
   if (user) {
     const { data: enrollment } = await supabase
       .from("enrollments")

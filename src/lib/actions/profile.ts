@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { safeGetUser } from "@/lib/supabase/auth-helpers";
 import { profileSchema } from "@/lib/validations/profile";
 
 export interface ProfileActionState {
@@ -24,9 +25,7 @@ export async function updateProfileAction(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await safeGetUser(supabase);
   if (!user) return { error: "No autenticado" };
 
   const { error } = await supabase

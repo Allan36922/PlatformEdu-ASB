@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { safeGetUser } from "@/lib/supabase/auth-helpers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { renderCertificatePdf } from "@/lib/certificates/generate";
 import type { Certificate } from "@/types/database";
@@ -12,9 +13,7 @@ import type { Certificate } from "@/types/database";
  */
 export async function ensureCertificatePdf(courseId: string): Promise<Certificate | null> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await safeGetUser(supabase);
   if (!user) return null;
 
   const admin = createAdminClient();

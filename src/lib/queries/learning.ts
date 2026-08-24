@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { safeGetUser } from "@/lib/supabase/auth-helpers";
 import type { Course, Lesson, LessonProgress, QuizQuestion, Section } from "@/types/database";
 
 export type LessonWithQuiz = Lesson & { quiz_questions: QuizQuestion[] };
@@ -17,9 +18,7 @@ export interface LearningData {
 
 export async function getLearningData(courseId: string, lessonId: string): Promise<LearningData | null> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await safeGetUser(supabase);
   if (!user) return null;
 
   const { data: course } = await supabase.from("courses").select("*").eq("id", courseId).maybeSingle();

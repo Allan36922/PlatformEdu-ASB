@@ -1,56 +1,49 @@
-import { NextResponse } from "next/server";
-import { AccessToken, RoomAgentDispatch, RoomConfiguration } from "livekit-server-sdk";
-import { createClient } from "@/lib/supabase/server";
+import { NextRequest, NextResponse } from "next/server";
+import { validateAgentRequest } from "@/lib/utils/agentAuth";
+import { AccessToken } from "livekit-server-sdk";
 
-/**
- * Emite tokens de LiveKit para el widget de voz embebido (/agente-edy vía
- * iframe). Si hay sesión de Supabase activa, la identity/metadata del token
- * es el usuario real; si no, se genera una identity anónima para que un
- * visitante sin cuenta también pueda hablar con Edy.
- */
-export async function POST(request: Request) {
-  const apiKey = process.env.LIVEKIT_API_KEY;
-  const apiSecret = process.env.LIVEKIT_API_SECRET;
-  if (!apiKey || !apiSecret) {
-    return NextResponse.json({ error: "LiveKit no está configurado" }, { status: 500 });
+const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY;
+const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET;
+const LIVEKIT_URL = process.env.LIVEKIT_URL;
+
+export async function GET(request: NextRequest) {
+  const authError = validateAgentRequest(request);
+  if (authError) return authError;
+
+  const { searchParams } = new URL(request.url);
+  const studentId = searchParams.get("studentId");
+
+  if (!studentId) {
+    return NextResponse.json({ error: "studentId requerido" }, { status: 400 });
   }
 
-  let body: { room?: string; studentId?: string | null };
+  if (!LIVEKIT_API_KEY || !LIVEKIT_API_SECRET || !LIVEKIT_URL) {
+    return NextResponse.json(
+      { error: "Credenciales de LiveKit no configuradas" },
+      { status: 500 }
+    );
+  }
+
   try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Body inválido" }, { status: 400 });
+    const token = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
+      identity: `student-${studentId}`,
+      name: `Estudiante ${studentId.slice(0, 8)}`,
+      ttl: "2h",
+    });
+
+    token.addGrant({
+      roomJoin: true,
+      room: "edtech-widget",
+      canPublish: true,
+      canSubscribe: true,
+      canPublishData: true,
+    });
+
+    const jwt = await token.toJwt();
+
+    return NextResponse.json({ token: jwt });
+  } catch (err) {
+    console.error("Error generando token LiveKit:", err);
+    return NextResponse.json({ error: "Error generando token" }, { status: 500 });
   }
-  const room = body.room;
-  if (!room) {
-    return NextResponse.json({ error: "Falta room" }, { status: 400 });
-  }
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const studentId = body.studentId ?? undefined;
-  const identity = user?.id ?? studentId ?? `anon-${crypto.randomUUID()}`;
-
-  const token = new AccessToken(apiKey, apiSecret, {
-    identity,
-    metadata: JSON.stringify({ studentId: user?.id ?? studentId ?? null }),
-    ttl: "10m",
-  });
-  token.addGrant({
-    room,
-    roomJoin: true,
-    canPublish: true,
-    canSubscribe: true,
-  });
-  // Dispatch explícito: el worker de AgentEdy se registra con
-  // agent_name="edy" (ver main.py), así que sin esto LiveKit crea la sala
-  // pero nunca invoca al agente.
-  token.roomConfig = new RoomConfiguration({
-    agents: [new RoomAgentDispatch({ agentName: "edy" })],
-  });
-
-  return NextResponse.json({ token: await token.toJwt() });
 }

@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { safeGetUser } from "@/lib/supabase/auth-helpers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ensureCertificatePdf } from "@/lib/actions/certificates";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await safeGetUser(supabase);
   if (!user) return NextResponse.redirect(new URL("/login", request.url));
 
   const { data: certificate } = await supabase.from("certificates").select("*").eq("id", id).single();

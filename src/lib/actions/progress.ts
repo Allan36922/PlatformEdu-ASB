@@ -2,12 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { safeGetUser } from "@/lib/supabase/auth-helpers";
 
 export async function markLessonCompleteAction(courseId: string, lessonId: string) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await safeGetUser(supabase);
   if (!user) return { error: "No autenticado" };
 
   const { error } = await supabase.from("lesson_progress").upsert(
@@ -23,9 +22,7 @@ export async function markLessonCompleteAction(courseId: string, lessonId: strin
 
 export async function saveLessonPositionAction(lessonId: string, seconds: number) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await safeGetUser(supabase);
   if (!user) return;
 
   await supabase.from("lesson_progress").upsert(

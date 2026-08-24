@@ -1,37 +1,24 @@
-import { NextResponse } from "next/server";
 import { searchCoursesBySimilarity } from "@/lib/queries/searchCourses";
-import { checkAgentAuth } from "@/lib/agent-auth";
+import { NextRequest, NextResponse } from "next/server";
+import { validateAgentRequest } from "@/lib/utils/agentAuth";
 
-/**
- * Endpoint consumido por el agente de voz (LiveKit, repo edyagent) vía
- * backend_client.search_courses — no por el navegador. Protegido con un
- * secreto compartido en vez de sesión de Supabase porque el caller es un
- * backend externo, no un usuario autenticado en la app.
- */
-export async function GET(request: Request) {
-  const authError = checkAgentAuth(request);
+export async function GET(request: NextRequest) {
+  const authError = validateAgentRequest(request);
   if (authError) return authError;
 
   const { searchParams } = new URL(request.url);
-  const query = searchParams.get("q")?.trim();
-  if (!query) {
-    return NextResponse.json({ error: "Falta el parámetro q" }, { status: 400 });
+  const q = searchParams.get("q")?.trim();
+  const limit = parseInt(searchParams.get("limit") || "10");
+
+  if (!q) {
+    return NextResponse.json({ error: "Parámetro 'q' requerido" }, { status: 400 });
   }
 
-  const courses = await searchCoursesBySimilarity(query, 10);
-
-  return NextResponse.json(
-    courses.map((course) => ({
-      id: course.id,
-      title: course.title,
-      slug: course.slug,
-      short_description: course.short_description,
-      category: course.category,
-      level: course.level,
-      price: course.price,
-      rating_average: course.rating_average,
-      student_count: course.student_count,
-      url: `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/cursos/${course.slug}`,
-    })),
-  );
+  try {
+    const courses = await searchCoursesBySimilarity(q, limit);
+    return NextResponse.json({ courses, query: q });
+  } catch (err) {
+    console.error("Error en búsqueda semántica:", err);
+    return NextResponse.json({ error: "Error en búsqueda" }, { status: 500 });
+  }
 }

@@ -1,33 +1,43 @@
-import { NextResponse } from "next/server";
-import { checkAgentAuth } from "@/lib/agent-auth";
-import { searchCourses } from "@/lib/queries/courses";
+import { createClient } from "@/lib/supabase/server";
+import { COURSE_WITH_INSTRUCTOR_SELECT } from "@/lib/queries/courses";
+import { NextRequest, NextResponse } from "next/server";
+import { validateAgentRequest } from "@/lib/utils/agentAuth";
 
-/**
- * Lista el catálogo publicado para el agente de voz Edy, con filtro opcional
- * por categoría. Wrapper delgado sobre searchCourses (misma query que usa
- * /cursos), sin lógica de Supabase propia.
- */
-export async function GET(request: Request) {
-  const authError = checkAgentAuth(request);
+export async function GET(request: NextRequest) {
+  const authError = validateAgentRequest(request);
   if (authError) return authError;
 
   const { searchParams } = new URL(request.url);
-  const category = searchParams.get("category") ?? undefined;
+  const category = searchParams.get("category") || undefined;
+  const page = parseInt(searchParams.get("page") || "1");
+  const pageSize = parseInt(searchParams.get("pageSize") || "12");
 
-  const { courses } = await searchCourses({ category, pageSize: 50 });
+  const supabase = await createClient();
 
-  return NextResponse.json(
-    courses.map((course) => ({
-      id: course.id,
-      title: course.title,
-      slug: course.slug,
-      short_description: course.short_description,
-      category: course.category,
-      level: course.level,
-      price: course.price,
-      rating_average: course.rating_average,
-      student_count: course.student_count,
-      url: `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/cursos/${course.slug}`,
-    })),
-  );
+  let query = supabase
+    .from("courses")
+    .select(COURSE_WITH_INSTRUCTOR_SELECT, { count: "exact" })
+    .eq("status", "published")
+    .order("student_count", { ascending: false });
+
+  if (category) {
+    query = query.eq("category", category);
+  }
+
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  query = query.range(from, to);
+
+  const { data, count, error } = await query;
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({
+    courses: data ?? [],
+    total: count ?? 0,
+    page,
+    pageSize,
+  });
 }

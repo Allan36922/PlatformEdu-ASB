@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { safeGetUser } from "@/lib/supabase/auth-helpers";
 import { reviewSchema } from "@/lib/validations/review";
 
 export interface ReviewActionState {
@@ -22,9 +23,7 @@ export async function submitReviewAction(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await safeGetUser(supabase);
   if (!user) return { error: "Debes iniciar sesión para dejar una reseña" };
 
   const { error } = await supabase.from("reviews").upsert(

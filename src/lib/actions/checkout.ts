@@ -2,13 +2,12 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { safeGetUser } from "@/lib/supabase/auth-helpers";
 import { stripe } from "@/lib/stripe/server";
 
 export async function createCheckoutSessionAction(courseId: string) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await safeGetUser(supabase);
   if (!user) redirect(`/login?redirect=/checkout/${courseId}`);
 
   const { data: course } = await supabase
@@ -23,7 +22,7 @@ export async function createCheckoutSessionAction(courseId: string) {
   const { data: existingEnrollment } = await supabase
     .from("enrollments")
     .select("id")
-    .eq("student_id", user!.id)
+    .eq("student_id", user.id)
     .eq("course_id", courseId)
     .maybeSingle();
   if (existingEnrollment) redirect(`/cursos/${course.slug}`);
@@ -48,8 +47,8 @@ export async function createCheckoutSessionAction(courseId: string) {
           quantity: 1,
         },
       ],
-      customer_email: user!.email ?? undefined,
-      metadata: { courseId: course.id, studentId: user!.id },
+      customer_email: user.email ?? undefined,
+      metadata: { courseId: course.id, studentId: user.id },
       success_url: `${siteUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl}/cursos/${course.slug}`,
     });

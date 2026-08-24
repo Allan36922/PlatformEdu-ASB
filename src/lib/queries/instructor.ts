@@ -1,11 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
+import { safeGetUser } from "@/lib/supabase/auth-helpers";
 import type { Course, Lesson, QuizQuestion, Section } from "@/types/database";
 
 export async function getInstructorCourses() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await safeGetUser(supabase);
   if (!user) return [];
 
   const { data } = await supabase

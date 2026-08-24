@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { safeGetUser } from "@/lib/supabase/auth-helpers";
 import { courseBasicInfoSchema } from "@/lib/validations/course";
 import { slugify } from "@/lib/utils";
 
@@ -45,9 +46,7 @@ export async function createCourseAction(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await safeGetUser(supabase);
   if (!user) redirect("/login");
 
   const slug = await generateUniqueSlug(supabase, parsed.data.title);
@@ -55,7 +54,7 @@ export async function createCourseAction(
   const { data: course, error } = await supabase
     .from("courses")
     .insert({
-      instructor_id: user!.id,
+      instructor_id: user.id,
       title: parsed.data.title,
       slug,
       short_description: parsed.data.short_description,
