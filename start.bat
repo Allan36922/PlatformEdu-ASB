@@ -51,9 +51,20 @@ if "%NO_PYTHON%"=="" (
 echo [3/5] Iniciando Next.js (http://localhost:3000)...
 start "EduPlatform" cmd /c "npm run dev"
 
-:: Wait for Next.js to be ready
-echo     Esperando a que Next.js este listo...
-timeout /t 8 /nobreak >nul
+:: Wait for Next.js to compile and be ready
+echo     Esperando a que Next.js compile (puede tardar 30-60s)...
+timeout /t 30 /nobreak >nul
+
+:: Verify server is up
+echo     Verificando conexion...
+:WAIT_SERVER
+curl -s -o nul -w "%%{http_code}" http://localhost:3000/ 2>nul | findstr /C:"200" >nul
+if errorlevel 1 (
+    echo     Servidor no listo, esperando 10s mas...
+    timeout /t 10 /nobreak >nul
+    goto WAIT_SERVER
+)
+echo     Next.js listo!
 
 if "%NO_PYTHON%"=="" (
     echo [5/5] Iniciando agente Edy (LiveKit)...
