@@ -2,12 +2,13 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { EdyVoiceWidget } from "@/components/player/edy-voice-widget";
+import { EdyChatWidget } from "@/components/player/edy-chat-widget";
 import { generateLiveKitToken } from "@/lib/livekit-token";
+import { EdyTabSelector } from "@/components/player/edy-tab-selector";
 
 /**
- * Página para el asistente de voz Edy.
+ * Página del agente Edy con voz y chat.
  * Requiere autenticación (protegida por proxy).
- * El token de LiveKit se genera server-side para no exponer la API key.
  */
 export default async function AgenteEdyPage() {
   const supabase = await createClient();
@@ -20,8 +21,7 @@ export default async function AgenteEdyPage() {
   }
 
   const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL ?? "";
-  
-  // Generate LiveKit token server-side
+
   let token: string | null = null;
   try {
     token = await generateLiveKitToken(user.id);
@@ -47,7 +47,7 @@ export default async function AgenteEdyPage() {
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="lucide lucide-graduation-cap size-5 text-primary"
+              className="size-5 text-primary"
               aria-hidden="true"
             >
               <path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z" />
@@ -63,18 +63,21 @@ export default async function AgenteEdyPage() {
             >
               Catálogo
             </Link>
-            <span className="text-sm text-muted-foreground">
-              {user.email}
-            </span>
+            <span className="text-sm text-muted-foreground">{user.email}</span>
           </div>
         </div>
       </header>
 
       <main className="flex-1 flex items-center justify-center p-4">
-        <EdyVoiceWidget
-          livekitUrl={livekitUrl}
-          token={token}
-          studentId={user.id}
+        <EdyTabSelector
+          voiceWidget={
+            <EdyVoiceWidget
+              livekitUrl={livekitUrl}
+              token={token}
+              studentId={user.id}
+            />
+          }
+          chatWidget={<EdyChatWidget studentId={user.id} />}
         />
       </main>
     </div>
