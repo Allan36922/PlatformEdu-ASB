@@ -2,11 +2,12 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { EdyVoiceWidget } from "@/components/player/edy-voice-widget";
+import { generateLiveKitToken } from "@/lib/livekit-token";
 
 /**
  * Página para el asistente de voz Edy.
  * Requiere autenticación (protegida por proxy).
- * Se puede embeber vía iframe o navegar directamente.
+ * El token de LiveKit se genera server-side para no exponer la API key.
  */
 export default async function AgenteEdyPage() {
   const supabase = await createClient();
@@ -19,6 +20,14 @@ export default async function AgenteEdyPage() {
   }
 
   const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL ?? "";
+  
+  // Generate LiveKit token server-side
+  let token: string | null = null;
+  try {
+    token = await generateLiveKitToken(user.id);
+  } catch (err) {
+    console.error("Failed to generate LiveKit token:", err);
+  }
 
   return (
     <div className="flex min-h-svh flex-col bg-background">
@@ -64,8 +73,7 @@ export default async function AgenteEdyPage() {
       <main className="flex-1 flex items-center justify-center p-4">
         <EdyVoiceWidget
           livekitUrl={livekitUrl}
-          roomName="edtech-widget"
-          tokenEndpoint="/api/agent/token"
+          token={token}
           studentId={user.id}
         />
       </main>
