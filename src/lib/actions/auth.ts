@@ -53,8 +53,24 @@ export async function signUpAction(
 
     if (error) return { error: error.message };
 
-    if (!data.session) {
-      return { info: "Revisa tu correo para confirmar tu cuenta antes de continuar." };
+    // Auto-confirm email if Supabase requires confirmation but the session
+    // wasn't returned (email confirmation enabled on the project).
+    if (data.user && !data.session) {
+      try {
+        const admin = createAdminClient();
+        await admin.auth.admin.updateUserById(data.user.id, {
+          email_confirm: true,
+        });
+        // Re-sign in now that the email is confirmed
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: parsed.data.email,
+          password: parsed.data.password,
+        });
+        if (!signInError) redirect("/onboarding");
+      } catch {
+        // If auto-confirm fails, fall back to asking the user to check their email
+        return { info: "Revisa tu correo para confirmar tu cuenta antes de continuar." };
+      }
     }
 
     redirect("/onboarding");
@@ -82,7 +98,14 @@ export async function signInAction(
   const supabase = await createClient();
   try {
     const { error } = await withTimeout(supabase.auth.signInWithPassword(parsed.data));
-    if (error) return { error: "Email o contraseña incorrectos" };
+    if (error) {
+      // Map common Supabase error codes to user-friendly messages
+      const msg = error.message;
+      if (msg.includes("Email not confirmed") || msg.includes("email not confirmed")) {
+        return { error: "Tu cuenta aún no ha sido confirmada. Revisa tu correo para activarla." };
+      }
+      return { error: "Email o contraseña incorrectos" };
+    }
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Error al iniciar sesión" };
   }
