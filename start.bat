@@ -1,4 +1,5 @@
 @echo off
+setlocal EnableDelayedExpansion
 title EduPlatform + Edy Agent
 color 0A
 
@@ -10,7 +11,7 @@ echo.
 :: Check if Node.js is installed
 where node >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [ERROR] Node.js no encontrado. Instala Node.js desde https://nodejs.org
+    echo [ERROR] Node.js no encontrado. Instala desde https://nodejs.org
     pause
     exit /b 1
 )
@@ -25,52 +26,73 @@ if %errorlevel% neq 0 (
 
 :: Check if .env.local exists
 if not exist .env.local (
-    echo [ERROR] .env.local no encontrado. Copia .env.example a .env.local y configura las credenciales.
+    echo [ERROR] .env.local no encontrado.
     pause
     exit /b 1
 )
 
-echo [1/4] Limpiando cache de Turbopack...
-if exist .next rmdir /s /q .next 2>nul
-echo         Cache limpiada.
+echo [1/6] Deteniendo procesos anteriores...
+taskkill /F /IM node.exe >nul 2>&1
+timeout /t 2 /nobreak >nul
+echo       Procesos anteriores detenidos.
 
-echo [1/4] Instalando dependencias de Node.js...
+echo [2/6] Limpiando cache de Turbopack...
+if exist .next (
+    rmdir /s /q .next 2>nul
+    if exist .next (
+        ren .next .next_old_%RANDOM% 2>nul
+        echo       Cache renombrada (estaba bloqueada).
+    ) else (
+        echo       Cache limpiada.
+    )
+) else (
+    echo       Cache ya limpia.
+)
+
+echo [3/6] Instalando dependencias de Node.js...
 call npm install --silent 2>nul
+echo       Dependencias listas.
 
 if "%NO_PYTHON%"=="" (
-    echo [2/5] Instalando dependencias de Python...
+    echo [4/6] Instalando dependencias de Python...
     if not exist "edy-agent\venv" (
         python -m venv edy-agent\venv 2>nul
     )
     call edy-agent\venv\Scripts\activate.bat 2>nul
     pip install -r edy-agent\requirements.txt --quiet 2>nul
+    echo       Python listo.
 ) else (
-    echo [2/4] Python no disponible, saltando agente de voz...
+    echo [4/6] Python no disponible, saltando agente de voz...
 )
 
-echo [3/5] Iniciando Next.js (http://localhost:3000)...
+echo [5/6] Iniciando Next.js (http://localhost:3000)...
 start "EduPlatform" cmd /c "npm run dev"
 
-:: Wait for Next.js to compile and be ready
-echo     Esperando a que Next.js compile (puede tardar 30-60s)...
-timeout /t 30 /nobreak >nul
+echo       Esperando a que Next.js compile...
+timeout /t 35 /nobreak >nul
 
-:: Verify server is up
-echo     Verificando conexion...
+set RETRY=0
 :WAIT_SERVER
 curl -s -o nul -w "%%{http_code}" http://localhost:3000/ 2>nul | findstr /C:"200" >nul
 if errorlevel 1 (
-    echo     Servidor no listo, esperando 10s mas...
-    timeout /t 10 /nobreak >nul
+    set /a RETRY+=1
+    if !RETRY! geq 10 (
+        echo       [ERROR] Next.js no arranco despues de 10 intentos.
+        echo       Revisa la ventana de Next.js.
+        pause
+        exit /b 1
+    )
+    echo       Esperando... !RETRY!/10
+    timeout /t 5 /nobreak >nul
     goto WAIT_SERVER
 )
-echo     Next.js listo!
+echo       Next.js listo!
 
 if "%NO_PYTHON%"=="" (
-    echo [5/5] Iniciando agente Edy (LiveKit)...
+    echo [6/6] Iniciando agente Edy (LiveKit)...
     start "Edy Agent" cmd /c "cd edy-agent && ..\edy-agent\venv\Scripts\activate.bat && python agent.py start"
 ) else (
-    echo [5/5] Agente de voz no disponible (sin Python).
+    echo [6/6] Agente de voz no disponible (sin Python).
 )
 
 echo.
@@ -78,7 +100,7 @@ echo ============================================
 echo   Todo listo!
 echo ============================================
 echo.
-echo   Frontend:  http://localhost:3000
+echo   Frontend:   http://localhost:3000
 echo   Agente Edy: http://localhost:3000/agente-edy
 echo   Chat:       http://localhost:3000/agente-edy (pestana Chat)
 echo.
