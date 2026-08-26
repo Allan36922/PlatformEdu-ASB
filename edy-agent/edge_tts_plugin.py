@@ -10,6 +10,7 @@ from dataclasses import dataclass
 
 import edge_tts
 from livekit.agents import tts
+from livekit.agents.types import APIConnectOptions
 
 logger = logging.getLogger("edge-tts-plugin")
 
@@ -36,10 +37,11 @@ class EdgeTTS(tts.TTS):
         )
         self._options = options or EdgeTTSOptions()
 
-    def synthesize(self, text: str) -> "EdgeTTSChunkedStream":
+    def synthesize(self, text: str, *, conn_options: APIConnectOptions | None = None) -> "EdgeTTSChunkedStream":
         return EdgeTTSChunkedStream(
             tts=self,
-            text=text,
+            input_text=text,
+            conn_options=conn_options or APIConnectOptions(),
             options=self._options,
         )
 
@@ -50,11 +52,12 @@ class EdgeTTSChunkedStream(tts.ChunkedStream):
     def __init__(
         self,
         tts: EdgeTTS,
-        text: str,
+        input_text: str,
+        conn_options: APIConnectOptions,
         options: EdgeTTSOptions,
     ):
-        super().__init__(tts=tts)
-        self._text = text
+        super().__init__(tts=tts, input_text=input_text, conn_options=conn_options)
+        self._text = input_text
         self._options = options
 
     async def __aiter__(self):

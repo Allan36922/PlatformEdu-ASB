@@ -114,17 +114,23 @@ async def entrypoint(ctx: JobContext) -> None:
         api_key=os.getenv("OPENAI_API_KEY"),
     )
 
-    # Create STT plugin (OpenAI-compatible Whisper via NVIDIA NIM)
+    # Create STT plugin (optional - requires OpenAI-compatible endpoint)
+    stt = None
     stt_api_key = os.getenv("STT_API_KEY") or os.getenv("OPENAI_API_KEY")
     stt_base_url = os.getenv("STT_BASE_URL", "https://integrate.api.nvidia.com/v1")
     stt_model = os.getenv("STT_MODEL", "nvidia/whisper-large-v3")
 
-    stt = openai_plugin.STT(
-        model=stt_model,
-        base_url=stt_base_url,
-        api_key=stt_api_key,
-    )
-    logger.info(f"STT configured: {stt_model} @ {stt_base_url}")
+    # NVIDIA NIM cloud doesn't have a whisper STT endpoint,
+    # so only configure STT if STT_BASE_URL points elsewhere
+    if os.getenv("STT_BASE_URL"):
+        stt = openai_plugin.STT(
+            model=stt_model,
+            base_url=stt_base_url,
+            api_key=stt_api_key,
+        )
+        logger.info(f"STT configured: {stt_model} @ {stt_base_url}")
+    else:
+        logger.info("STT not configured (no STT_BASE_URL) - voice input disabled, text + TTS only")
 
     # Create TTS plugin (EdgeTTS - free Microsoft voices)
     tts_voice = os.getenv("EDY_TTS_VOICE", "es-ES-ElviraNeural")
