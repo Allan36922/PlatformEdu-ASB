@@ -12,11 +12,7 @@ interface Message {
   content: string;
 }
 
-interface EdyChatWidgetProps {
-  studentId?: string;
-}
-
-export function EdyChatWidget(_props: EdyChatWidgetProps) {
+export function EdyChatWidget() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);

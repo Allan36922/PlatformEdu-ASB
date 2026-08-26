@@ -77,10 +77,9 @@ export default async function AgenteEdyPage() {
               <EdyVoiceWidget
                 livekitUrl={livekitUrl}
                 token={token}
-                studentId={user.id}
               />
             }
-            chatWidget={<EdyChatWidget studentId={user.id} />}
+            chatWidget={<EdyChatWidget />}
           />
         </div>
       </main>

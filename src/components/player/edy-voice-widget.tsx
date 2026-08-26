@@ -11,7 +11,6 @@ import { Room, RoomEvent, Track } from "livekit-client";
 interface EdyVoiceWidgetProps {
   livekitUrl: string;
   token: string | null;
-  studentId: string;
 }
 
 type ConnectionState = "disconnected" | "connecting" | "connected" | "error";
@@ -20,7 +19,6 @@ type AgentState = "idle" | "listening" | "thinking" | "speaking";
 export function EdyVoiceWidget({
   livekitUrl,
   token,
-  studentId: _studentId,
 }: EdyVoiceWidgetProps) {
   const roomRef = useRef<Room | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -34,6 +32,9 @@ export function EdyVoiceWidget({
   const [micLevel, setMicLevel] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [transcript, setTranscript] = useState<string | null>(null);
+
+  // Ref to hold the latest updateMicLevel callback (avoids stale closure + hoisting issues)
+  const updateMicLevelRef = useRef<(() => void) | null>(null);
 
   // Audio level visualization
   const updateMicLevel = useCallback(() => {
@@ -51,8 +52,13 @@ export function EdyVoiceWidget({
     const level = Math.min(100, Math.round(avg * 1.5));
 
     setMicLevel(level);
-    animFrameRef.current = requestAnimationFrame(updateMicLevel);
+    animFrameRef.current = requestAnimationFrame(() => updateMicLevelRef.current?.());
   }, []);
+
+  // Keep ref in sync with latest callback
+  useEffect(() => {
+    updateMicLevelRef.current = updateMicLevel;
+  }, [updateMicLevel]);
 
   // Start mic level monitoring
   const startMicMonitoring = useCallback(async () => {
@@ -66,11 +72,11 @@ export function EdyVoiceWidget({
 
       audioContextRef.current = audioContext;
       analyserRef.current = analyser;
-      animFrameRef.current = requestAnimationFrame(updateMicLevel);
+      animFrameRef.current = requestAnimationFrame(() => updateMicLevelRef.current?.());
     } catch (err) {
       console.warn("Could not access microphone for level monitoring:", err);
     }
-  }, [updateMicLevel]);
+  }, []);
 
   // Stop mic level monitoring
   const stopMicMonitoring = useCallback(() => {

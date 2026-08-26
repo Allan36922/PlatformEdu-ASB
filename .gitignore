@@ -16,6 +16,9 @@ node_modules/
 e2e/
 test-results/
 
+# python venv
+edy-agent/venv/
+
 # next.js
 /.next/
 /out/
