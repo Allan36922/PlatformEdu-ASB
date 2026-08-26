@@ -2,7 +2,7 @@
 Edy - Voice Agent for EduPlatform
 
 A LiveKit voice agent that helps students discover and enroll in courses.
-Uses NVIDIA NIM (OpenAI-compatible) for LLM and LiveKit for voice.
+Uses NVIDIA NIM (OpenAI-compatible) for LLM/STT and EdgeTTS for free speech output.
 
 Usage:
     python agent.py
@@ -11,6 +11,7 @@ Environment variables (see .env):
     LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET
     EDUPLATFORM_API_URL, EDUPLATFORM_API_KEY
     OPENAI_API_KEY, OPENAI_BASE_URL, LLM_MODEL
+    STT_API_KEY, STT_BASE_URL, STT_MODEL
 """
 
 import asyncio
@@ -33,6 +34,7 @@ from livekit.agents import (
 from livekit.plugins import openai as openai_plugin
 from livekit.plugins import silero
 
+from edge_tts_plugin import EdgeTTS, EdgeTTSOptions
 from tools import EDY_TOOLS, TOOL_FUNCTIONS
 
 load_dotenv()
@@ -137,10 +139,29 @@ async def entrypoint(ctx: JobContext) -> None:
     
     # Create LLM plugin (OpenAI-compatible via NVIDIA NIM)
     llm = openai_plugin.LLM(
-        model=os.getenv("LLM_MODEL", "meta/llama-3.3-70b-instruct"),
+        model=os.getenv("LLM_MODEL", "nvidia/nemotron-3-ultra-550b-a55b"),
         base_url=os.getenv("OPENAI_BASE_URL", "https://integrate.api.nvidia.com/v1"),
         api_key=os.getenv("OPENAI_API_KEY"),
     )
+    
+    # Create STT plugin (OpenAI-compatible Whisper via NVIDIA NIM)
+    stt_api_key = os.getenv("STT_API_KEY") or os.getenv("OPENAI_API_KEY")
+    stt_base_url = os.getenv("STT_BASE_URL", "https://integrate.api.nvidia.com/v1")
+    stt_model = os.getenv("STT_MODEL", "nvidia/whisper-large-v3")
+    
+    stt = openai_plugin.STT(
+        model=stt_model,
+        base_url=stt_base_url,
+        api_key=stt_api_key,
+    )
+    logger.info(f"STT configured: {stt_model} @ {stt_base_url}")
+    
+    # Create TTS plugin (EdgeTTS - free Microsoft voices)
+    tts_voice = os.getenv("EDY_TTS_VOICE", "es-ES-ElviraNeural")
+    tts = EdgeTTS(
+        options=EdgeTTSOptions(voice=tts_voice)
+    )
+    logger.info(f"TTS configured: EdgeTTS voice={tts_voice}")
     
     # Create agent and session
     agent = EdyAgent()
@@ -149,6 +170,8 @@ async def entrypoint(ctx: JobContext) -> None:
     
     session = AgentSession(
         llm=llm,
+        stt=stt,
+        tts=tts,
         vad=ctx.proc.userdata["vad"],
         tools=EDY_TOOLS,
     )

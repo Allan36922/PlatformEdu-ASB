@@ -12,10 +12,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { searchCoursesBySimilarity } from "@/lib/queries/searchCourses";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 const NVIDIA_NIM_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
-const LLM_MODEL = "meta/llama-3.3-70b-instruct";
+const LLM_MODEL = "nvidia/nemotron-3-ultra-550b-a55b";
 
 const SYSTEM_PROMPT = `Eres Edy, el asistente virtual de EduPlatform (plataforma de cursos online en español).
 
@@ -27,10 +26,7 @@ Si el usuario quiere inscribirse, dile que vaya a http://localhost:3000/cursos p
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    await createClient();
 
     const body = await request.json();
     const { message, history = [] } = body as {

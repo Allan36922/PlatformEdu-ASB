@@ -5,8 +5,12 @@
 
 const https = require("https");
 
-const PROJECT_REF = "etbkutezeatbapnimebf";
+const PROJECT_REF = process.env.SUPABASE_PROJECT_REF || "etbkutezeatbapnimebf";
 const PAT_TOKEN = process.env.SUPABASE_PAT_TOKEN;
+if (!PAT_TOKEN) {
+  console.error("Set SUPABASE_PAT_TOKEN environment variable");
+  process.exit(1);
+}
 
 const NVIDIA_NIM_URL = "https://integrate.api.nvidia.com/v1/embeddings";
 const EMBEDDING_MODEL = "nvidia/nv-embedqa-e5-v5";
