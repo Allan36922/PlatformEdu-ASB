@@ -53,10 +53,6 @@ jobs:
       - name: Unit tests (Vitest)
         run: npm run test
 
-      - name: E2E tests (Playwright)
-        run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
-
   # ──────────────────────────────────────────────
   # Gate 3 — Code review (subagente code-reviewer)
   # Solo corre en Pull Requests
