@@ -176,7 +176,7 @@ async def entrypoint(ctx: JobContext) -> None:
         tools=EDY_TOOLS,
     )
     
-    await session.start(agent=agent, room=ctx.room, participant=participant)
+    await session.start(agent=agent, room=ctx.room)
 
 
 if __name__ == "__main__":
