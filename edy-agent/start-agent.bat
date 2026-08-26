@@ -46,6 +46,14 @@ echo Verificando variables de entorno...
 python -c "import os; from dotenv import load_dotenv; load_dotenv(); k=os.getenv('OPENAI_API_KEY',''); l=os.getenv('LIVEKIT_URL',''); print(f'  OPENAI_API_KEY: {\"SET (\" + k[:12] + \"...)\" if k else \"NOT SET\"}'); print(f'  LIVEKIT_URL: {l or \"NOT SET\"}'); print(f'  LLM_MODEL: {os.getenv(\"LLM_MODEL\", \"NOT SET\")}')"
 echo.
 
+:: Kill any previous agent on port 8081
+echo Verificando puerto 8081...
+for /f "tokens=5" %%a in ('netstat -aon 2^>nul ^| findstr :8081 ^| findstr LISTENING') do (
+    echo   Matando proceso anterior (PID %%a)...
+    taskkill /F /PID %%a >nul 2>&1
+)
+timeout /t 2 /nobreak >nul
+
 :: Start agent
 echo Iniciando agente Edy...
 echo (Presiona Ctrl+C para detener)
