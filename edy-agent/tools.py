@@ -112,11 +112,14 @@ async def get_course_detail(course_id: str) -> str:
         instructor = course.get("instructor", {})
         instructor_name = instructor.get("full_name", "Instructor no disponible") if instructor else "Instructor no disponible"
         
+        price_val = course.get('price') or 0
+        price_str = 'Gratis' if price_val == 0 else f'${price_val:.2f}'
+        
         lines = [
             f"📚 {course.get('title', 'Sin título')}",
             f"Categoría: {course.get('category', 'N/A')}",
             f"Nivel: {course.get('level', 'N/A')}",
-            f"Precio: {'Gratis' if (course.get('price') or 0) == 0 else f'${course.get(\"price\", 0):.2f}'}",
+            f"Precio: {price_str}",
             f"Instructor: {instructor_name}",
             f"Estudiantes: {course.get('student_count', 0)}",
             f"Rating: {course.get('rating_average', 0)}/5",
