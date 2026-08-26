@@ -112,7 +112,7 @@ echo       Next.js listo en puerto 3000!
 if "%HAS_PYTHON%"=="1" (
     echo.
     echo Iniciando agente Edy (LiveKit)...
-    start "Edy Agent" cmd /k "cd /d %CD%\edy-agent && ..\edy-agent\venv\Scripts\activate.bat && python agent.py start"
+    start "Edy Agent" cmd /k "cd /d %CD%\edy-agent && call venv\Scripts\activate.bat && python agent.py start"
     echo       Agente Edy iniciado en ventana separada.
 )
 
