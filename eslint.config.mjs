@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Auto-generated runtime & utility scripts (CommonJS)
+    "supabase/.temp/**",
+    "scripts/**",
   ]),
 ]);
 

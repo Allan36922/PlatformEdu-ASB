@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { COURSE_WITH_INSTRUCTOR_SELECT } from "@/lib/queries/courses";
 import type { CourseWithInstructor } from "@/types/database";
-import { generateEmbedding, generateLocalEmbedding, cosineSimilarity } from "@/lib/utils/localEmbeddings";
+import { generateLocalEmbedding, cosineSimilarity } from "@/lib/utils/localEmbeddings";
 
 /**
  * Pide el embedding de un texto libre a la Edge Function "embed-text", que

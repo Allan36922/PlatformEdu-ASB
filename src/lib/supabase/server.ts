@@ -1,8 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-const PROTECTED_PREFIXES = ["/instructor", "/estudiante", "/aprender", "/onboarding", "/checkout"];
-
 /**
  * Quick probe with a 2 s timeout, cached for 30 s.
  * Returns false when Supabase is unreachable (Docker off, network down, etc.).

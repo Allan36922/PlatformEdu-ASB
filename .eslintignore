@@ -1,0 +1,12 @@
+# Auto-generated runtime & utility scripts (CommonJS)
+scripts/
+supabase/.temp/
+
+# Next.js build output
+.next/
+out/
+build/
+
+# Generated files
+next-env.d.ts
+*.tsbuildinfo
