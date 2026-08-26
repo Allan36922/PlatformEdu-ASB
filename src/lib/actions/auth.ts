@@ -99,12 +99,39 @@ export async function signInAction(
   try {
     const { error } = await withTimeout(supabase.auth.signInWithPassword(parsed.data));
     if (error) {
-      // Map common Supabase error codes to user-friendly messages
       const msg = error.message;
+      // Auto-confirm email if it hasn't been confirmed yet
       if (msg.includes("Email not confirmed") || msg.includes("email not confirmed")) {
-        return { error: "Tu cuenta aún no ha sido confirmada. Revisa tu correo para activarla." };
+        try {
+          const admin = createAdminClient();
+          // List users (paginated) and find by email
+          const { data: userData } = await admin.auth.admin.listUsers({
+            page: 1,
+            perPage: 1000,
+          });
+          const foundUser = userData?.users?.find(
+            (u) => u.email === parsed.data.email,
+          );
+          if (foundUser) {
+            await admin.auth.admin.updateUserById(foundUser.id, {
+              email_confirm: true,
+            });
+            // Retry sign-in now that email is confirmed
+            const { error: retryError } = await withTimeout(
+              supabase.auth.signInWithPassword(parsed.data),
+            );
+            if (retryError) {
+              return { error: "Email o contraseña incorrectos" };
+            }
+          } else {
+            return { error: "Email o contraseña incorrectos" };
+          }
+        } catch {
+          return { error: "Email o contraseña incorrectos" };
+        }
+      } else {
+        return { error: "Email o contraseña incorrectos" };
       }
-      return { error: "Email o contraseña incorrectos" };
     }
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Error al iniciar sesión" };

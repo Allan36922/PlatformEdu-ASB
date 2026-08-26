@@ -5,6 +5,7 @@ import { EdyVoiceWidget } from "@/components/player/edy-voice-widget";
 import { EdyChatWidget } from "@/components/player/edy-chat-widget";
 import { generateLiveKitToken } from "@/lib/livekit-token";
 import { EdyTabSelector } from "@/components/player/edy-tab-selector";
+import { LlmStatusIndicator } from "@/components/player/llm-status-indicator";
 
 /**
  * Página del agente Edy con voz y chat.
@@ -69,16 +70,19 @@ export default async function AgenteEdyPage() {
       </header>
 
       <main className="flex-1 flex items-center justify-center p-4">
-        <EdyTabSelector
-          voiceWidget={
-            <EdyVoiceWidget
-              livekitUrl={livekitUrl}
-              token={token}
-              studentId={user.id}
-            />
-          }
-          chatWidget={<EdyChatWidget studentId={user.id} />}
-        />
+        <div className="w-full max-w-2xl space-y-4">
+          <LlmStatusIndicator />
+          <EdyTabSelector
+            voiceWidget={
+              <EdyVoiceWidget
+                livekitUrl={livekitUrl}
+                token={token}
+                studentId={user.id}
+              />
+            }
+            chatWidget={<EdyChatWidget studentId={user.id} />}
+          />
+        </div>
       </main>
     </div>
   );

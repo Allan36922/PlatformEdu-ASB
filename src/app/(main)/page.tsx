@@ -36,11 +36,17 @@ export default async function HomePage() {
             </p>
 
             {/* CTAs */}
-            <div className="pt-4 flex justify-center items-center gap-4">
+            <div className="pt-4 flex justify-center items-center gap-4 flex-wrap">
               <Button size="lg" nativeButton={false} render={<Link href="/cursos">Explorar Cursos</Link>} />
               <Button
                 size="lg"
                 variant="outline"
+                nativeButton={false}
+                render={<Link href="/agente-edy">🤖 Habla con Edy</Link>}
+              />
+              <Button
+                size="lg"
+                variant="ghost"
                 nativeButton={false}
                 render={<Link href="/signup">Enseñar en EduPlatform</Link>}
               />

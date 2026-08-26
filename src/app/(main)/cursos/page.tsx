@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import Link from "next/link";
 import { CourseFilters } from "@/components/catalog/course-filters";
 import { CourseCard } from "@/components/courses/course-card";
 import { CoursePagination } from "@/components/catalog/pagination";
 import { searchCourses, type CourseFilters as CourseFiltersType } from "@/lib/queries/courses";
+import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = { title: "Explorar cursos" };
 
@@ -28,7 +30,15 @@ export default async function CoursesPage({ searchParams }: CoursesPageProps) {
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
       <div className="mb-8 space-y-4">
-        <h1 className="text-3xl font-bold tracking-tight">Explorar cursos</h1>
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <h1 className="text-3xl font-bold tracking-tight">Explorar cursos</h1>
+          <Button
+            size="sm"
+            variant="outline"
+            nativeButton={false}
+            render={<Link href="/agente-edy">🤖 Habla con Edy</Link>}
+          />
+        </div>
         <Suspense>
           <CourseFilters />
         </Suspense>
