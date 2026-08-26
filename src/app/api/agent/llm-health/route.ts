@@ -1,41 +1,52 @@
 import { NextResponse } from "next/server";
 
-const NVIDIA_NIM_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
+const NVIDIA_NIM_BASE = "https://integrate.api.nvidia.com/v1";
 const LLM_MODEL = "nvidia/nemotron-3-ultra-550b-a55b";
 
 /**
  * GET /api/agent/llm-health
- * Lightweight health check that sends a minimal request to the LLM
- * and returns 200 if reachable, 502 otherwise.
+ * Lightweight check: verifies the API key is configured and the
+ * NVIDIA NIM endpoint is reachable (models list — no LLM inference).
  */
 export async function GET() {
-  const apiKey = process.env.OPENAI_API_KEY || process.env.NVIDIA_NIM_API_KEY;
+  const apiKey =
+    process.env.OPENAI_API_KEY || process.env.NVIDIA_NIM_API_KEY;
+
   if (!apiKey) {
     return NextResponse.json(
-      { ok: false, error: "OPENAI_API_KEY not configured" },
+      { ok: false, error: "NVIDIA_NIM_API_KEY not configured" },
       { status: 500 },
     );
   }
 
   try {
-    const res = await fetch(NVIDIA_NIM_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: LLM_MODEL,
-        messages: [{ role: "user", content: "ping" }],
-        max_tokens: 5,
-      }),
-      signal: AbortSignal.timeout(15_000),
+    // Use the models endpoint — lightweight, no inference cost
+    const res = await fetch(`${NVIDIA_NIM_BASE}/models`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(10_000),
     });
 
     if (!res.ok) {
       const body = await res.text();
       return NextResponse.json(
         { ok: false, status: res.status, detail: body.slice(0, 300) },
+        { status: 502 },
+      );
+    }
+
+    // Also verify our specific model is listed
+    const data = await res.json();
+    const models = data?.data ?? [];
+    const modelFound = models.some(
+      (m: { id?: string }) => m.id === LLM_MODEL,
+    );
+
+    if (!modelFound) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: `Model ${LLM_MODEL} not found in available models`,
+        },
         { status: 502 },
       );
     }
